@@ -4,6 +4,8 @@ const commandAdd = require('./commandAdd.js')
 const commandMultiply = require('./commandMultiply.js')
 const commandJumpIfTrue = require('./commandJumpIfTrue.js')
 const commandJumpIfFalse = require('./commandJumpIfFalse.js')
+const commandLessThan = require('./commandLessThan.js')
+const commandEquals = require('./commandEquals.js')
 const parseInstruction = require('./parseInstruction.js')
 
 const rl = readline.createInterface({
@@ -73,27 +75,13 @@ const run = async (memory, instructionPointer = 0) => {
       }
     case 7:
       {
-        const pointerA = memory[instructionPointer + 1]
-        const pointerB = memory[instructionPointer + 2]
-        const pointerC = memory[instructionPointer + 3]
-
-        const a = param1 === 1 ? pointerA : memory[pointerA]
-        const b = param2 === 1 ? pointerB : memory[pointerB]
-
-        memory[pointerC] = (a < b) ? 1 : 0
-        return run(memory, instructionPointer + 4)
+        const data = commandLessThan({param1, param2, memory, instructionPointer})
+        return run(data.memory, data.instructionPointer)
       }
     case 8:
       {
-        const pointerA = memory[instructionPointer + 1]
-        const pointerB = memory[instructionPointer + 2]
-        const pointerC = memory[instructionPointer + 3]
-
-        const a = param1 === 1 ? pointerA : memory[pointerA]
-        const b = param2 === 1 ? pointerB : memory[pointerB]
-
-        memory[pointerC] = (a === b) ? 1 : 0
-        return run(memory, instructionPointer + 4)
+        const data = commandEquals({param1, param2, memory, instructionPointer})
+        return run(data.memory, data.instructionPointer)
       }
     case 99:
       // finished
