@@ -103,7 +103,7 @@ const render = (layers, width) => {
     if (index % width === 0) {
       rl.write('\n')
     }
-    rl.write(p === 'b' ? 'X' : ' ')
+    rl.write(p === 'w' ? 'X' : ' ')
   })
 
   rl.write('\n')
