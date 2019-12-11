@@ -6,40 +6,31 @@ const commandLessThan = require('./commandLessThan.js')
 const commandEquals = require('./commandEquals.js')
 const parseInstruction = require('./parseInstruction.js')
 
-function * computer (memory) {
-  let complete = false
-  let instructionPointer = 0
-  let output = []
-  let requireInput = false
-  let result = null
+// TODO figure out a better way of getting values in and out of computer
 
-  function run (input) {
+function computer (memory, name = 'default') {
+  let instructionPointer = 0
+  const state = {
+    input: [],
+    output: []
+  }
+
+  function run () {
     const {opcode, param1, param2} = parseInstruction(memory[instructionPointer])
+    console.log('run', opcode)
 
     switch (opcode) {
-      case 1:
-        {
-          const data = commandAdd({param1, param2, memory, instructionPointer})
-          instructionPointer = data.instructionPointer
-          memory = data.memory
-          return
-        }
-      case 2:
-        {
-          const data = commandMultiply({param1, param2, memory, instructionPointer})
-          instructionPointer = data.instructionPointer
-          memory = data.memory
-          return
-        }
+      case 1: return commandAdd({param1, param2, memory, instructionPointer})
+      case 2: return commandMultiply({param1, param2, memory, instructionPointer})
       case 3:
         {
+          const input = state.input.shift()
           if (!input) {
-            requireInput = true
-            return
+            throw new Error(`Could not read input for ${name} cpu`)
           }
 
-          requireInput = false
-          output = []
+          state.output = []
+
           const pointerA = memory[instructionPointer + 1]
 
           if (param1 === 1) {
@@ -50,67 +41,61 @@ function * computer (memory) {
 
           instructionPointer += 2
 
-          return
+          return {memory, instructionPointer}
         }
       case 4:
         {
           const pointerA = memory[instructionPointer + 1]
           const value = param1 === 1 ? pointerA : memory[pointerA]
 
-          output.push(value)
-          console.log(output)
+          state.output.push(value)
+          console.log(`>>> ${value} added to output: ${state.output.join(',')} <<<`)
 
           instructionPointer += 2
-          return
+          return {memory, instructionPointer}
         }
-      case 5:
-        {
-          const data = commandJumpIfTrue({param1, param2, memory, instructionPointer})
-          instructionPointer = data.instructionPointer
-          memory = data.memory
-          return
-        }
-      case 6:
-        {
-          const data = commandJumpIfFalse({param1, param2, memory, instructionPointer})
-          instructionPointer = data.instructionPointer
-          memory = data.memory
-          return
-        }
-      case 7:
-        {
-          const data = commandLessThan({param1, param2, memory, instructionPointer})
-          instructionPointer = data.instructionPointer
-          memory = data.memory
-          return
-        }
-      case 8:
-        {
-          const data = commandEquals({param1, param2, memory, instructionPointer})
-          instructionPointer = data.instructionPointer
-          memory = data.memory
-          return
-        }
-      case 99:
-        complete = true
-        return memory[0]
+      case 5: return commandJumpIfTrue({param1, param2, memory, instructionPointer})
+      case 6: return commandJumpIfFalse({param1, param2, memory, instructionPointer})
+      case 7: return commandLessThan({param1, param2, memory, instructionPointer})
+      case 8: return commandEquals({param1, param2, memory, instructionPointer})
+      case 99: return memory[0]
       default:
         throw new Error(`Unknown instruction at position ${instructionPointer}`)
     }
   }
 
-  while (!complete) {
-    let input = null
+  let paused = false
 
-    if (requireInput) {
-      console.log('requiring input')
-      input = yield output
+  return {
+    getOutput: () => state.output.shift() || null,
+    setInput: value => state.input.push(value),
+    step: () => {
+      paused = false
+      console.log(state.input)
+
+      while (!paused) {
+        const {opcode} = parseInstruction(memory[instructionPointer])
+
+        if (opcode === 3 && !state.input.length) {
+          paused = true
+          console.log('pausing to wait for input')
+          continue
+        }
+
+        const result = run()
+        console.log('RESULT', result)
+
+        if (typeof result === 'number') {
+          return result
+        }
+
+        memory = result.memory
+        instructionPointer = result.instructionPointer
+      }
+
+      return false
     }
-
-    result = run(input)
   }
-
-  return result
 }
 
 module.exports = computer
